@@ -111,5 +111,4 @@ jobs:
 
           gh issue create \
             --title "$TITLE" \
-            --body  "$BODY" \
-            --label "automated,sca-catalog"
+            --body  "$BODY"
