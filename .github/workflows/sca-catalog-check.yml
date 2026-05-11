@@ -2,15 +2,15 @@ name: Veracode SCA Catalog Count Check
 
 on:
   schedule:
-    # 9am UK time. UK is UTC+0 (GMT) Oct–Mar and UTC+1 (BST) Mar–Oct.
+    # 9am UK time. UK is UTC+0 (GMT) Oct-Mar and UTC+1 (BST) Mar-Oct.
     # Running at 09:00 UTC covers 9am GMT (winter) / 10am BST (summer).
     # Change to "0 8 * * *" if you prefer 9am BST (summer) / 8am GMT (winter).
     - cron: "0 9 * * *"
-  workflow_dispatch: # allow manual runs
+  workflow_dispatch:
 
 permissions:
-  contents: write   # to commit the history file
-  issues: write     # to open issues
+  contents: write   # commit updated history file
+  issues: write     # open issues when value changes
 
 jobs:
   check-catalog-count:
@@ -25,11 +25,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch current catalog count
+      - name: Fetch current catalog count and update history
         id: fetch
         run: |
           python - <<'EOF'
-          import datetime, json, os, urllib.request
+          import datetime
+          import json
+          import os
+          import urllib.request
 
           url = "https://api.sourceclear.com/catalog/search?q="
           req = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -37,29 +40,28 @@ jobs:
               data = json.loads(resp.read().decode())
 
           current = data["metadata"]["hits"]
-          print(f"Current catalog hits: {current:,}")
+          timestamp = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
+          history_file = "last-catalog-count.txt"
 
-            timestamp = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
-            history_file = ".github/catalog-count-history.csv"
+          existing_rows = []
           previous = None
-            existing_rows = []
 
-            if os.path.exists(history_file):
+          if os.path.exists(history_file):
               with open(history_file, encoding="utf-8") as f:
-                lines = [line.rstrip("\n") for line in f if line.strip()]
+                  lines = [line.rstrip("\n") for line in f if line.strip()]
 
               if lines and lines[0] == "timestamp_utc,total":
-                existing_rows = lines[1:]
+                  existing_rows = lines[1:]
               else:
-                existing_rows = lines
+                  existing_rows = lines
 
-            if existing_rows:
+          if existing_rows:
               parts = existing_rows[0].split(",", 1)
               if len(parts) == 2:
-                try:
-                  previous = int(parts[1])
-                except ValueError:
-                  previous = None
+                  try:
+                      previous = int(parts[1])
+                  except ValueError:
+                      previous = None
 
           changed = previous is None or current != previous
           diff = (current - previous) if previous is not None else None
@@ -70,22 +72,21 @@ jobs:
               out.write(f"changed={'true' if changed else 'false'}\n")
               out.write(f"diff={diff if diff is not None else 'N/A'}\n")
 
-              # Always prepend the latest observation (most recent first)
-          os.makedirs(".github", exist_ok=True)
-              new_line = f"{timestamp},{current}"
-              with open(history_file, "w", encoding="utf-8") as f:
-                f.write("timestamp_utc,total\n")
-                f.write(new_line + "\n")
-                for row in existing_rows:
+          # Prepend newest observation so most recent entry is first.
+          new_line = f"{timestamp},{current}"
+          with open(history_file, "w", encoding="utf-8") as f:
+              f.write("timestamp_utc,total\n")
+              f.write(new_line + "\n")
+              for row in existing_rows:
                   f.write(row + "\n")
           EOF
 
-            - name: Commit updated history file
+      - name: Commit updated history file
         run: |
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-              git add .github/catalog-count-history.csv
-              git diff --cached --quiet || git commit -m "chore: log SCA catalog count ${{ steps.fetch.outputs.current }}"
+          git add last-catalog-count.txt
+          git diff --cached --quiet || git commit -m "chore: log SCA catalog count ${{ steps.fetch.outputs.current }}"
           git push
 
       - name: Create issue for count change
@@ -100,7 +101,7 @@ jobs:
 
           if [ "$PREVIOUS" = "unknown" ]; then
             TITLE="[SCA Catalog] Baseline established: ${CURRENT} entries (${DATE})"
-            BODY="## Veracode SCA Catalog — Initial Baseline
+            BODY="## Veracode SCA Catalog - Initial Baseline
 
           The catalog count has been recorded for the first time.
 
@@ -109,11 +110,11 @@ jobs:
           | Count | \`${CURRENT}\` |
           | Date  | \`${DATE}\` |
 
-          > API: \`https://api.sourceclear.com/catalog/search?q=\` · field: \`metadata.hits\`"
+          > API: \`https://api.sourceclear.com/catalog/search?q=\` - field: \`metadata.hits\`"
           else
             SIGN=$([ "$DIFF" -gt 0 ] && echo "+" || echo "")
-            TITLE="[SCA Catalog] Count changed: ${PREVIOUS} → ${CURRENT} (${SIGN}${DIFF}) on ${DATE}"
-            BODY="## Veracode SCA Catalog — Count Change Detected
+            TITLE="[SCA Catalog] Count changed: ${PREVIOUS} -> ${CURRENT} (${SIGN}${DIFF}) on ${DATE}"
+            BODY="## Veracode SCA Catalog - Count Change Detected
 
           | Field    | Value |
           |----------|-------|
@@ -122,9 +123,9 @@ jobs:
           | Change   | \`${SIGN}${DIFF}\` |
           | Date     | \`${DATE}\` |
 
-          > API: \`https://api.sourceclear.com/catalog/search?q=\` · field: \`metadata.hits\`"
+          > API: \`https://api.sourceclear.com/catalog/search?q=\` - field: \`metadata.hits\`"
           fi
 
           gh issue create \
             --title "$TITLE" \
-            --body  "$BODY"
+            --body "$BODY"
