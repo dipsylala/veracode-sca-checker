@@ -1,13 +1,13 @@
 # Veracode SCA Catalog Checker
 
-A GitHub Actions workflow that monitors the total number of entries in the [Veracode SCA (SourceClear) catalog](https://api.sourceclear.com/catalog/search?q=) and opens an issue whenever the count changes.
+A GitHub Actions workflow that monitors the total number of entries in the [Veracode SCA (SourceClear) catalog](https://api.sourceclear.com/catalog/search?q=) and opens an issue on every run.
 
 ## How it works
 
 1. Every day at 9am GMT, the workflow calls `https://api.sourceclear.com/catalog/search?q=` and reads `metadata.hits` — the total number of library entries in the catalog.
 2. It prepends a new history row to `last-catalog-count.txt` in `timestamp_utc,total` format (most recent first).
 3. It compares the current total to the previous top history row.
-4. If the total changed (or no baseline exists yet), it opens a GitHub issue showing the previous value, current value, and the difference.
+4. It opens a GitHub issue on every run, showing whether the value changed, stayed the same, or established a baseline.
 
 ## Repository structure
 
@@ -31,6 +31,6 @@ The workflow uses the built-in `GITHUB_TOKEN` with the following permissions:
 | Permission | Reason |
 |------------|--------|
 | `contents: write` | Commit the updated history file |
-| `issues: write` | Open an issue when the count changes |
+| `issues: write` | Open an issue on each run |
 
 No additional secrets are required.

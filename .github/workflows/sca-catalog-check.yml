@@ -10,7 +10,7 @@ on:
 
 permissions:
   contents: write   # commit updated history file
-  issues: write     # open issues when value changes
+  issues: write     # open issues for every run
 
 jobs:
   check-catalog-count:
@@ -89,8 +89,7 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: log SCA catalog count ${{ steps.fetch.outputs.current }}"
           git push
 
-      - name: Create issue for count change
-        if: steps.fetch.outputs.changed == 'true'
+      - name: Create issue for run result
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -109,6 +108,20 @@ jobs:
           |-------|-------|
           | Count | \`${CURRENT}\` |
           | Date  | \`${DATE}\` |
+
+          > API: \`https://api.sourceclear.com/catalog/search?q=\` - field: \`metadata.hits\`"
+          elif [ "$CURRENT" = "$PREVIOUS" ]; then
+            TITLE="[SCA Catalog] No change: ${CURRENT} (${DATE})"
+            BODY="## Veracode SCA Catalog - No Change
+
+          The catalog total is unchanged since the previous run.
+
+          | Field    | Value |
+          |----------|-------|
+          | Previous | \`${PREVIOUS}\` |
+          | Current  | \`${CURRENT}\` |
+          | Change   | \`0\` |
+          | Date     | \`${DATE}\` |
 
           > API: \`https://api.sourceclear.com/catalog/search?q=\` - field: \`metadata.hits\`"
           else
