@@ -126,7 +126,8 @@ jobs:
           > API: \`https://api.sourceclear.com/catalog/search?q=\` - field: \`metadata.hits\`"
           else
             SIGN=$([ "$DIFF" -gt 0 ] && echo "+" || echo "")
-            TITLE="[SCA Catalog] Count changed: ${PREVIOUS} -> ${CURRENT} (${SIGN}${DIFF}) on ${DATE}"
+            DAY=$(date -u -d "$DATE" +"%A")
+            TITLE="[SCA Catalog] Count changed: ${PREVIOUS} -> ${CURRENT} (${SIGN}${DIFF}) on ${DATE} - ${DAY}"
             BODY="## Veracode SCA Catalog - Count Change Detected
 
           | Field    | Value |
