@@ -8,11 +8,12 @@ import urllib.request
 
 
 API_URL = "https://api.sourceclear.com/catalog/search?q="
+REQUEST_TIMEOUT_SECONDS = 30
 
 
 def fetch(url: str) -> dict:
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
         return json.loads(resp.read().decode())
 
 
