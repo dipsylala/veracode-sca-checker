@@ -8,7 +8,7 @@ import urllib.request
 
 
 API_URL = "https://api.sourceclear.com/catalog/search?q="
-REQUEST_TIMEOUT_SECONDS = 30
+REQUEST_TIMEOUT_SECONDS = 60
 
 
 def fetch(url: str) -> dict:
